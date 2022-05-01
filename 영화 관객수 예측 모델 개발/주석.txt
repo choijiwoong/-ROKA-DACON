@@ -77,3 +77,28 @@ print("title_train의 shape: ", title_train_padded.shape)#600, 20
 	[4-1단계: 모델설계]ㅋㅋ이런식으로 했는데 애초에 입력값은 공통적인 특성을 띄고 그 특성의 shape를 넣는거라 이렇게 제각각의 데이터를 넣으면 안되지..
 model.fit((train_data['title'], train_data['distributor'], train_data['genre'], train_data['release_time'], train_data['time'], train_data['screening_rat'], train_data['director'], train_data['dir_prev_bfnum']. train_data['dir_prev_num'], train_data['num_staff']. train_data['num_actor']), train_data['box_off_num'], epochs=5, verbose=2)
 해결을 어떻게 할 수 있을까.... 아예 처음 방향부터 다시 잡아야겠는데.. 우선 여기에서 잠시 쉬어가야겠다
+ 우선 직관적으로 생각나는건 입력 사이즈를 통일시켜주는거임. 다만 비효율적이며 padding값을 미반영 시키기 어려울 수 있어보임.
+다음으로 생각나는건 각 feature별로 별개의 layer을 사용한 뒤, 그 layer의 출력값의 사이즈를 통일시켜서 전체를 총괄하는 모델을 설계하는것임. concatenate를 사용할 수도 있음.
+일단 생각나는건 이 2개인데 후자가 전자보단 나아보이니 리팩터링 해야겠다. 근데 확실히 내가 ML을 NLP위주로 시작하다보니 일반적인 데이터를 처리하는데에 많이 다르긴하네..
+근데 갑자기 웬만하면 그냥 선형 모델로 충분히 전부 예측 가능해보이는데? 굳이 복잡하게 해야하나. 그냥 xw+b구조로 웬만한 feature들 다 추론가능할거같은데..
+그니까 가정을 하나 추가해서 모델링한다는 거임 director같은건 생각해봐야겠지만 num_staff, num_actor같은 단순한 수치는 num_box_off에 정비례한다는 가정이랄까? 아 흠..최적값을 찾긴 어렵겠고만.
+최적값을 찾아야하는거면... affine layer하나로는 안될거같고 선형이 아닐거같아서. affine을 여러개 중첩하면 될거같은데 몇개를 중첩할지는 hyperparameter로 설정하면 될거같다.
+그럼 일반적인 수치값의 처리는 해결될 거 같고, 마지막에 통합하는 모델의 입력으로 들어갈 사이즈역시 hyperparameter로. 근데 이러면 남은 director라던지 time, genre역시 해당 사이즈를 따라야하는데
+이러한 값도 그냥 multi-affine으로 해결하면 되려나. genre는 그렇다쳐도 director는 어떻게 하노....title이랑.. 생각보다 어렵네.
+그래도 아무것도 안하는 것 보단 나으니 해당 feature을 아예 배제하고 모델링해서 num_off_box결과 산출 해봐야겠다.
+
+#[4-1단계: 모델설계]
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.models import Sequential
+
+model=Sequential()
+model.add(Dense(64 , input_shape=(11,), activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(1))
+
+model.compile(loss='MSE', optimizer='SGD', metrics=['accuracy'])
+model.fit((train_data['title'], train_data['distributor'], train_data['genre'], train_data['release_time'], train_data['time'], train_data['screening_rat'], train_data['director'], train_data['dir_prev_bfnum']. train_data['dir_prev_num'], train_data['num_staff']. train_data['num_actor']), train_data['box_off_num'], epochs=5, verbose=2)
+
+리팩터링 전 모델 백업

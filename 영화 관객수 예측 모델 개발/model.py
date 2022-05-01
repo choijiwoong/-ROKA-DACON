@@ -69,16 +69,21 @@ print(train_data['num_staff'])
 
 print(train_data['num_actor'])
 
-#[4-1단계: 모델설계]
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.models import Sequential
+#[4-2단계: 모델 설계]_title, distributor, director, genre제외
+from tensorflow.keras.layers import Dense, Dropout, Input, Concatenate
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
 
 model=Sequential()
-model.add(Dense(64 , input_shape=(11,), activation='relu'))
+model.add(Dense(32, input_shape=(600,1), activation='relu'))#release_time, time, dir_prev_bfnum, dir_prev_num, num_staff, num_actor만을 사용예정
 model.add(Dropout(0.5))
-model.add(Dense(128, activation='relu'))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(16, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(1))
 
-model.compile(loss='MSE', optimizer='SGD', metrics=['accuracy'])
-model.fit((train_data['title'], train_data['distributor'], train_data['genre'], train_data['release_time'], train_data['time'], train_data['screening_rat'], train_data['director'], train_data['dir_prev_bfnum']. train_data['dir_prev_num'], train_data['num_staff']. train_data['num_actor']), train_data['box_off_num'], epochs=5, verbose=2)
+
+model.compile(loss='binary_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
+model.fit(train_data['release_time'], train_data['box_off_num'], epochs=500, verbose=2)#, train_data['time'], train_data['dir_prev_bfnum'], train_data['dir_prev_num'], train_data['num_staff'], train_data['num_actor']
